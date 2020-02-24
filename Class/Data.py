@@ -21,11 +21,7 @@ class Data():
         self.val_ds = 0
         self.test_ds = 0
 
-    def load_data(self, fname):
-        for line in fname:
-            line = line
-
-    def make_dataflame(self):
+    def make_dataset(self):
         self.train_ds, self.val_ds, self.test_ds = \
             torchtext.data.TabularDataset.splits(
                 path=PATH, train=TRAIN, test=TEST,
@@ -34,10 +30,11 @@ class Data():
 
 
 def main():
-    data_flame = Data()
-    data_flame.make_dataflame()
-    return 0
-
+    data_set = Data()
+    data_set.make_dataset()
+    print(data_set)
+    print(vars(data_set.train_ds[0])['Text'])
+    print(vars(data_set.train_ds[0])['Label'])
 
 if __name__ == '__main__':
     main()

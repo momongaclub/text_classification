@@ -1,30 +1,37 @@
+import sys
 import collections
 import numpy as np
 import pandas as pd
-import torchtext
 import torch
-
 import torch.nn as nn
+import torch.nn.functional as F
+import torchtext
+import spacy
 
-import Model
+# from Class import Model
 
-PATH = './.data/ag_news_csv/'
+PATH = '.data/ag_news_csv/'
+# PATH = './Class/.data/ag_news_csv/'
 TRAIN = 'train.csv'
 TEST = 'test.csv'
 VALIDATION = 'validation.csv'
 FORMAT = 'csv'
-TRAIN_BATCH_SIZE = 16
+TRAIN_BATCH_SIZE = 32
 VAL_BATCH_SIZE = 256
 TEST_BATCH_SIZE = 256
 
 
+def tokenizer(text):
+    spacy_en = spacy.load('en')
+    return [tok.text for tok in spacy_en.tokenizer(text)]
+
 class Data():
 
     def __init__(self):
-        self.dataloader = 0
-        self.text = torchtext.data.Field(sequential=True,
-                                         lower=True, include_lengths=True)
-        self.label = torchtext.data.Field()
+        # batch_first は [batch, x, x]のように一番最初にbatchの次元を持ってくる
+        # self.text = torchtext.data.Field(sequential=True, batch_first=True, tokenize=tokenizer)
+        self.text = torchtext.data.Field(sequential=True, batch_first=True, lower=True)
+        self.label = torchtext.data.Field(batch_first=True)
         self.train_ds = 0
         self.val_ds = 0
         self.test_ds = 0
@@ -40,19 +47,46 @@ class Data():
                 fields=[('Label', self.label), ('Text', self.text)])
 
     def make_vocab(self):
+        # 3種類の辞書を作成,n vectorsを指定すると事前学習したベクトルを読み込める
         self.text.build_vocab(self.train_ds.Text, self.val_ds.Text,
-                              self.test_ds.Text, vectors = \
-                              torchtext.vocab.GloVe(name = '6B', dim = 300))
-        self.label.build_vocab(self.train_ds.Text)
+                              self.test_ds.Text, vectors=
+                              torchtext.vocab.GloVe(name='6B', dim=300))
+        self.label.build_vocab(self.train_ds.Label,
+                               self.val_ds.Label, self.test_ds.Label)
 
     def make_iter(self):
-        self.train_iter, self.val_iter, self.test_iter = torchtext.data.Iterator.splits( 
-            (self.train_ds, self.val_ds, self.test_ds), batch_sizes=(
-                                                                TRAIN_BATCH_SIZE, 
-                                                                VAL_BATCH_SIZE,
-                                                                TEST_BATCH_SIZE),
-                                                                )
+        self.train_iter, self.val_iter, self.test_iter = \
+            torchtext.data.Iterator.splits(
+                (self.train_ds, self.val_ds, self.test_ds), batch_sizes=(
+                    TRAIN_BATCH_SIZE,
+                    VAL_BATCH_SIZE,
+                    TEST_BATCH_SIZE),
+            )
 
+
+class simplernn(nn.Module):
+    def __init__(self, embedding_dim, hidden_dim, vocab_size, vocab_vectors, gpu=False, batch_first=True):
+        # embedding_dimは分散表現の次元数,
+        super(simplernn, self).__init__()
+        self.gpu = gpu
+        self.hidden_dim = hidden_dim
+        self.embed = nn.Embedding(vocab_size, embedding_dim)
+        self.embed.weight.data.copy_(vocab_vectors)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, batch_first=batch_first)
+        output_dim = 1
+        self.linear1 = nn.Linear(hidden_dim, output_dim)
+
+    def forward(self, sentence):
+        # lstmの最初の入力に過去の隠れ層はないのでゼロベクトルを代入する
+        # self.hidden = self.init_hidden(sentence.size(0))
+        embed = self.embed(sentence)
+        y, hidden = self.lstm(embed)
+        y = F.tanh(y)
+        y = self.linear1(y)
+        y = F.tanh(y)
+        #print("y", y)
+        #print("hidden", hidden)
+        return y
 
 def main():
     data_set = Data()
@@ -60,18 +94,31 @@ def main():
     data_set.make_vocab()
     data_set.make_iter()
 
-    v_size = data_set.text.vocab.vectors.size()[0]
-    emb_dim = data_set.text.vocab.vectors.size()[1]
-    h_dim = 10
-    model = Model.RNNmodel(emb_dim, h_dim, v_size,
-                           data_set.text.vocab.vectors, 16)
+    vocab_size = data_set.text.vocab.vectors.size()[0]
+    embedd_dim = data_set.text.vocab.vectors.size()[1]
+    hidden_dim = 100
+    vocab_vectors = data_set.text.vocab.vectors
 
-    epochs = 0
+    rnn = simplernn(embedd_dim, hidden_dim, vocab_size, vocab_vectors)
+    epoch = 0
+
     for batch in iter(data_set.train_iter):
-        x, y = batch.Text[0], batch.Label
-        out_ = model.forward(x)
-        print(epochs, out_)
-        epochs+=1
+        """
+        print(batch)
+        print(batch.Text)
+        print(batch.Label)
+        """
+        target = batch.Label
+        #target = target.squeeze()
+        output = rnn.forward(batch.Text) 
+        loss_function = nn.CrossEntropyLoss()
+        loss = loss_function(output, target)
+        optimizer = torch.optim.SGD(rnn.parameters(), lr=1e-2, momentum=0.9)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        print('epoch:', epoch, 'loss:', loss.item())
+        epoch += 1
 
 
 if __name__ == '__main__':

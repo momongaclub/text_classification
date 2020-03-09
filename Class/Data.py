@@ -16,7 +16,7 @@ TRAIN = 'train.csv'
 TEST = 'test.csv'
 VALIDATION = 'validation.csv'
 FORMAT = 'csv'
-TRAIN_BATCH_SIZE = 32
+TRAIN_BATCH_SIZE = 128
 VAL_BATCH_SIZE = 256
 TEST_BATCH_SIZE = 256
 
@@ -60,7 +60,7 @@ class Data():
                 (self.train_ds, self.val_ds, self.test_ds), batch_sizes=(
                     TRAIN_BATCH_SIZE,
                     VAL_BATCH_SIZE,
-                    TEST_BATCH_SIZE),
+                    TEST_BATCH_SIZE), repeat=False
             )
 
 
@@ -75,16 +75,17 @@ class simplernn(nn.Module):
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, batch_first=batch_first)
         output_dim = 1
         self.linear1 = nn.Linear(hidden_dim, output_dim)
+        self.softmax = nn.LogSoftmax(dim=1) # TODO
 
     def forward(self, sentence):
         # lstmの最初の入力に過去の隠れ層はないのでゼロベクトルを代入する
         # self.hidden = self.init_hidden(sentence.size(0))
         embed = self.embed(sentence)
         y, hidden = self.lstm(embed)
-        y = F.tanh(y)
+        y = torch.tanh(y)
         y = self.linear1(y)
-        y = F.tanh(y)
-        #print("y", y)
+        y = torch.tanh(y)
+        y = self.softmax(y)
         #print("hidden", hidden)
         return y
 
@@ -96,29 +97,31 @@ def main():
 
     vocab_size = data_set.text.vocab.vectors.size()[0]
     embedd_dim = data_set.text.vocab.vectors.size()[1]
-    hidden_dim = 100
+    hidden_dim = 200
     vocab_vectors = data_set.text.vocab.vectors
 
     rnn = simplernn(embedd_dim, hidden_dim, vocab_size, vocab_vectors)
-    epoch = 0
 
-    for batch in iter(data_set.train_iter):
-        """
-        print(batch)
-        print(batch.Text)
-        print(batch.Label)
-        """
-        target = batch.Label
-        #target = target.squeeze()
-        output = rnn.forward(batch.Text) 
-        loss_function = nn.CrossEntropyLoss()
-        loss = loss_function(output, target)
-        optimizer = torch.optim.SGD(rnn.parameters(), lr=1e-2, momentum=0.9)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        print('epoch:', epoch, 'loss:', loss.item())
-        epoch += 1
+    for epoch in range(100):
+        data_len = len(data_set.train_iter)
+        batch_len = 0
+        for batch in iter(data_set.train_iter):
+            batch_len = batch_len + 1
+            """
+            print(batch)
+            print(batch.Text)
+            print(batch.Label)
+            """
+            target = batch.Label
+            #target = target.squeeze()
+            output = rnn.forward(batch.Text) 
+            loss_function = nn.CrossEntropyLoss()
+            loss = loss_function(output, target)
+            loss.backward()
+            optimizer = torch.optim.SGD(rnn.parameters(), lr=1e-2, momentum=0.9)
+            optimizer.zero_grad()
+            optimizer.step()
+            print('epoch:', epoch, 'batch_len', batch_len, '/', data_len, 'loss:', loss.item())
 
 
 if __name__ == '__main__':

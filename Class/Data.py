@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchtext
 import spacy
+import matplotlib.pyplot as plt
 
 # from Class import Model
 
@@ -17,7 +18,7 @@ TRAIN = 'train.csv'
 TEST = 'test.csv'
 VALIDATION = 'test.csv'
 FORMAT = 'csv'
-TRAIN_BATCH_SIZE = 128
+TRAIN_BATCH_SIZE = 64
 VAL_BATCH_SIZE = 256
 TEST_BATCH_SIZE = 256
 
@@ -104,14 +105,15 @@ def main():
 
     vocab_size = data_set.text.vocab.vectors.size()[0]
     embedd_dim = data_set.text.vocab.vectors.size()[1]
-    #print(vars(data_set.label.vocab))
-    # 6zigen 
     hidden_dim = 200
     vocab_vectors = data_set.text.vocab.vectors
 
     rnn = simplernn(embedd_dim, hidden_dim, vocab_size, vocab_vectors)
     loss_function = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(rnn.parameters(), lr=0.01, momentum=0.9)
+
+    losses = []
+    batch_sizes = []
 
     for epoch in range(100):
         data_len = len(data_set.train_iter)
@@ -122,13 +124,19 @@ def main():
             # torch.eye(クラス数)[対象tensor]でonehotへ
             target = torch.eye(6, dtype=torch.long)[target] # デフォルトfloatになるのでlong指定
             target = target.squeeze() #次元変換
-            #print('target', target, 'label', tmp)
             optimizer.zero_grad()
             output = rnn.forward(batch.Text) 
             loss = loss_function(output, target)
             loss.backward()
             optimizer.step()
             print('epoch:', epoch, 'batch_len', batch_len, '/', data_len, 'loss:', loss.item())
+            batch_sizes.append(batch_len)
+            losses.append(loss)
+            #graph.set_data(batch_len, loss.item())
+            plt.plot(batch_sizes, losses)
+            plt.draw()
+            plt.pause(0.1)
+            plt.cla()
 
 
 if __name__ == '__main__':

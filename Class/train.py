@@ -18,6 +18,10 @@ def plot_progress(x_axis, y_axis, time=0.1):
     plt.cla()
 
 def main():
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+
     data_set = Data.Data()
     data_set.make_dataset()
     data_set.make_vocab()
@@ -40,12 +44,15 @@ def main():
         batch_len = 0
         for batch in iter(data_set.train_iter):
             batch_len = batch_len + 1
-            target = batch.Label
+            #input_ = batch.Text
+            input_ = torch.tensor(batch.Text, device=device)
+            #target = batch.Label
+            target = torch.tensor(batch.Label, device=device)
             # torch.eye(クラス数)[対象tensor]でonehotへ
             target = torch.eye(6, dtype=torch.long)[target] # デフォルトfloatになるのでlong指定
             target = target.squeeze() #次元変換
             optimizer.zero_grad()
-            output = rnn.forward(batch.Text) 
+            output = rnn.forward(input_)
             loss = loss_function(output, target)
             loss.backward()
             optimizer.step()

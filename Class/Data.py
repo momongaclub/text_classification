@@ -1,6 +1,4 @@
 import sys
-import collections
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,15 +6,14 @@ import torchtext
 import spacy
 import matplotlib.pyplot as plt
 
-PATH = '.data/ag_news_csv/'
-# PATH = './Class/.data/ag_news_csv/'
+PATH = './Class/.data/ag_news_csv/'
 TRAIN = 'train.csv'
 TEST = 'test.csv'
 VALIDATION = 'test.csv'
 FORMAT = 'csv'
 TRAIN_BATCH_SIZE = 16
 VAL_BATCH_SIZE = 256
-TEST_BATCH_SIZE = 256
+TEST_BATCH_SIZE = 16
 
 
 def tokenizer(text):

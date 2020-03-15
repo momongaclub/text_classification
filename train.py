@@ -9,8 +9,10 @@ import torch.nn as nn
 
 def parse():
     parser = argparse.ArgumentParser()
-    parser.add_argument('epoch')
+    parser.add_argument('epochs')
     parser.add_argument('batch_size')
+    parser.add_argument('lr')
+    parser.add_argument('momentum')
 
 
 def plot_progress(x_axis, y_axis, time=0.1):
@@ -26,7 +28,6 @@ def plot_progress(x_axis, y_axis, time=0.1):
 def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    device = 'cpu'
     print(device)
 
     data_set = Data.Data()
@@ -40,9 +41,9 @@ def main():
     vocab_vectors = data_set.text.vocab.vectors
 
     rnn = Model.simplernn(embedd_dim, hidden_dim, vocab_size, vocab_vectors)
+    rnn.to(device)
     loss_function = nn.CrossEntropyLoss()  # softmaxを含む
     optimizer = torch.optim.SGD(rnn.parameters(), lr=0.01, momentum=0.9)
-    rnn.to(device)
 
     losses = []
     batch_sizes = []

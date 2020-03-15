@@ -16,6 +16,7 @@ def plot_progress(x_axis, y_axis, time=0.1):
     plt.pause(time)
     plt.cla()
 
+
 def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -34,7 +35,8 @@ def main():
 
     rnn = Model.simplernn(embedd_dim, hidden_dim, vocab_size, vocab_vectors)
     # パラメータの読み込み
-    parameter = torch.load('./Class/model_weight/model0.pt', map_location=torch.device(device))
+    parameter = torch.load('./Class/model_weight/model0.pt',
+                           map_location=torch.device(device))
     rnn.load_state_dict(parameter)
 
     # 評価モードに変更
@@ -60,14 +62,15 @@ def main():
             input_ = input_.to(device)
             batch_outputs = rnn.forward(input_)
             target = batch.Label
-            target = torch.eye(6, dtype=torch.long)[target] # デフォルトfloatになるのでlong指定
-            target = target.squeeze() #次元変換
+            target = torch.eye(6, dtype=torch.long)[
+                target]  # デフォルトfloatになるのでlong指定
+            target = target.squeeze()  # 次元変換
             target = target.to(device)
-            print('batch_len', batch_len,'/','data_len', data_len)
-            #print('predict', output.argmax(), 'target', target)
+            print('batch_len', batch_len, '/', 'data_len', data_len)
+            # print('predict', output.argmax(), 'target', target)
             pred += [int(outputs.argmax()) for outputs in batch_outputs]
             Y += [int(t.argmax()) for t in target]
-            #print('predict', pred, 'target', Y)
+            # print('predict', pred, 'target', Y)
             batch_sizes.append(batch_len)
     for p, t in zip(pred, Y):
         sum_ += 1

@@ -7,11 +7,11 @@ import spacy
 import matplotlib.pyplot as plt
 
 PATH = './Class/.data/ag_news_csv/'
-TRAIN = 'train.csv'
+TRAIN = 'train_sample.csv'
 TEST = 'test.csv'
 VALIDATION = 'test.csv'
 FORMAT = 'csv'
-TRAIN_BATCH_SIZE = 16
+TRAIN_BATCH_SIZE = 64
 VAL_BATCH_SIZE = 256
 TEST_BATCH_SIZE = 16
 
@@ -28,6 +28,7 @@ class Data():
         self.text = torchtext.data.Field(sequential=True, batch_first=True, lower=True)
         self.head = torchtext.data.Field(sequential=True, batch_first=True, lower=True)
         self.label = torchtext.data.Field(batch_first=True)
+        # self.label = torchtext.data.Field()
         self.train_ds = 0
         self.val_ds = 0
         self.test_ds = 0

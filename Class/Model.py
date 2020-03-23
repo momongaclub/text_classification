@@ -33,10 +33,13 @@ class simplernn(nn.Module):
         # lstmの最初の入力に過去の隠れ層はないのでゼロベクトルを代入する
         # self.hidden = self.init_hidden(sentence.size(0))
         embed = self.embed(sentence)
-        y, hidden = self.lstm(embed)
-        y = torch.tanh(y)
-        y = self.linear1(y)
-        return y
+        # h_outが最後の出力になる
+        y, (h_out, c_out) = self.lstm(embed)
+        h_out = torch.tanh(h_out)
+        h_out = self.linear1(h_out)
+        # y = self.linear1(y)
+        # print('y', y)
+        return h_out
 
 def main():
     return 0

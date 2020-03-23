@@ -5,6 +5,7 @@ import sys
 import argparse
 import torch
 import torch.nn as nn
+from sklearn.metrics import classification_report
 
 
 def plot_progress(x_axis, y_axis, time=0.1):
@@ -20,7 +21,6 @@ def plot_progress(x_axis, y_axis, time=0.1):
 def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    device = 'cpu'
     print(device)
 
     data_set = Data.Data()
@@ -30,12 +30,12 @@ def main():
 
     vocab_size = data_set.text.vocab.vectors.size()[0]
     embedd_dim = data_set.text.vocab.vectors.size()[1]
-    hidden_dim = 200
+    hidden_dim = 100
     vocab_vectors = data_set.text.vocab.vectors
 
     rnn = Model.simplernn(embedd_dim, hidden_dim, vocab_size, vocab_vectors)
     # パラメータの読み込み
-    parameter = torch.load('./Class/model_weight/model0.pt',
+    parameter = torch.load('./model_weight/model1.pt',
                            map_location=torch.device(device))
     rnn.load_state_dict(parameter)
 
@@ -56,27 +56,42 @@ def main():
     data_len = len(data_set.train_iter)
 
     for batch in iter(data_set.train_iter):
-        with torch.no_grad():
-            batch_len = batch_len + 1
-            input_ = batch.Text
-            input_ = input_.to(device)
-            batch_outputs = rnn.forward(input_)
-            target = batch.Label
-            target = torch.eye(6, dtype=torch.long)[
-                target]  # デフォルトfloatになるのでlong指定
-            target = target.squeeze()  # 次元変換
-            target = target.to(device)
-            print('batch_len', batch_len, '/', 'data_len', data_len)
-            # print('predict', output.argmax(), 'target', target)
-            pred += [int(outputs.argmax()) for outputs in batch_outputs]
-            Y += [int(t.argmax()) for t in target]
-            # print('predict', pred, 'target', Y)
-            batch_sizes.append(batch_len)
+        input_ = batch.Text
+        input_ = input_.to(device)
+        batch_outputs = rnn.forward(input_)
+        target = batch.Label
+        # print(input_, target)
+        # print(batch_outputs, target)
+        # print(target)
+        # ラベルをone-hotベクトルへ変換
+        # target = torch.eye(6, dtype=torch.long)[target]
+        # print(target)
+        target = target.squeeze()  # 次元変換
+        target = target.to(device)
+        #print('batch_len', batch_len, '/', 'data_len', data_len)
+        # print('predict', batch_outputs.argmax(), 'target', target)
+        # リスト内包表記　二重
+        for outputs in batch_outputs:
+            for output in outputs:
+                p = int(output.argmax())
+                pred.append(p)
+        # print(output[0])
+        #pred += [int(output.argmax()) for output in outputs]
+        # print('pred', pred)
+        print('output_len', len(pred), 'target_len', len(Y))
+        Y += [int(t) for t in target]
+        # print('predict', pred, 'target', Y)
+        batch_sizes.append(batch_len)
+        batch_len = batch_len + 1
+
+    print(classification_report(Y, pred))
+    """
     for p, t in zip(pred, Y):
         sum_ += 1
         if p == t:
             cnt += 1
     print(sum_, cnt)
+    """
 
 
 if __name__ == '__main__':

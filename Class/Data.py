@@ -25,10 +25,11 @@ class Data():
 
     def __init__(self):
         # batch_first は [batch, x, x]のように一番最初にbatchの次元を持ってくる
-        self.text = torchtext.data.Field(sequential=True, batch_first=True, lower=True)
-        self.head = torchtext.data.Field(sequential=True, batch_first=True, lower=True)
-        self.label = torchtext.data.Field(batch_first=True)
-        # self.label = torchtext.data.Field()
+        self.text = torchtext.data.Field(
+            sequential=True, batch_first=True, lower=True)
+        self.head = torchtext.data.Field(
+            sequential=True, batch_first=True, lower=True)
+        self.label = torchtext.data.LabelField(batch_first=True, sequential=False)
         self.train_ds = 0
         self.val_ds = 0
         self.test_ds = 0
@@ -44,13 +45,11 @@ class Data():
                 fields=[('Label', self.label), ('Head', self.head), ('Text', self.text)])
 
     def make_vocab(self):
-        # 3種類の辞書を作成,n vectorsを指定すると事前学習したベクトルを読み込める
+        # 3種類の辞書を作成,vectorsを指定すると事前学習した分散表現を読み込める
         self.text.build_vocab(self.train_ds.Text, self.val_ds.Text,
-                              self.test_ds.Text, vectors=
-                              torchtext.vocab.GloVe(name='6B', dim=300))
+                              self.test_ds.Text, vectors=torchtext.vocab.GloVe(name='6B', dim=300))
         self.head.build_vocab(self.train_ds.Head, self.val_ds.Head,
-                              self.test_ds.Head, vectors=
-                              torchtext.vocab.GloVe(name='6B', dim=300))
+                              self.test_ds.Head, vectors=torchtext.vocab.GloVe(name='6B', dim=300))
         self.label.build_vocab(self.train_ds.Label,
                                self.val_ds.Label, self.test_ds.Label)
 
@@ -66,6 +65,7 @@ class Data():
 
 def main():
     return 0
+
 
 if __name__ == '__main__':
     main()
